@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.2"
+             xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd">
+
+    <persistence-unit name="StudentPU_SQLServer" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- Entity classes -->
+        <class>iuh.fit.se.common.model.TaiKhoan</class>
+        <class>iuh.fit.se.common.model.Khoa</class>
+        <class>iuh.fit.se.common.model.LopHoc</class>
+        <class>iuh.fit.se.common.model.SinhVien</class>
+        <class>iuh.fit.se.common.model.GiangVien</class>
+        <class>iuh.fit.se.common.model.MonHoc</class>
+        <class>iuh.fit.se.common.model.HocKy</class>
+        <class>iuh.fit.se.common.model.LopHocPhan</class>
+        <class>iuh.fit.se.common.model.Diem</class>
+
+        <properties>
+            <!-- SQL Server JDBC configuration -->
+            <property name="javax.persistence.jdbc.driver" value="com.microsoft.sqlserver.jdbc.SQLServerDriver" />
+            <property name="javax.persistence.jdbc.url" value="jdbc:sqlserver://localhost:1433;databaseName=db_quanlysinhvien;encrypt=true;trustServerCertificate=true;" />
+            <property name="javax.persistence.jdbc.user" value="sa" />
+            <property name="javax.persistence.jdbc.password" value="sapassword" />
+
+            <!-- Hibernate properties -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.SQLServer2012Dialect" />
+            <property name="hibernate.hbm2ddl.auto" value="update" />
+            <property name="hibernate.show_sql" value="true" />
+            <property name="hibernate.format_sql" value="true" />
+        </properties>
+    </persistence-unit>
+</persistence>
