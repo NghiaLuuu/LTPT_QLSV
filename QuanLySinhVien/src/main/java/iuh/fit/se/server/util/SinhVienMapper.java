@@ -14,7 +14,8 @@ public class SinhVienMapper {
         dto.setNgaySinh(e.getNgaySinh());
         dto.setGioiTinh(e.getGioiTinh());
         dto.setChuyenNganh(e.getChuyenNganh());
-        dto.setLop(e.getLop());
+        // Lấy mã lớp từ relationship LopHoc
+        dto.setLop(e.getLopHoc() != null ? e.getLopHoc().getMaLop() : null);
         dto.setDiemTB(e.getDiemTB());
         return dto;
     }
@@ -27,9 +28,9 @@ public class SinhVienMapper {
         e.setNgaySinh(dto.getNgaySinh());
         e.setGioiTinh(dto.getGioiTinh() != null ? dto.getGioiTinh() : Gender.OTHER);
         e.setChuyenNganh(dto.getChuyenNganh());
-        e.setLop(dto.getLop());
+        // Note: LopHoc relationship sẽ được set trong Service layer
+        // vì cần load LopHoc entity từ database
         e.setDiemTB(dto.getDiemTB());
         return e;
     }
 }
-

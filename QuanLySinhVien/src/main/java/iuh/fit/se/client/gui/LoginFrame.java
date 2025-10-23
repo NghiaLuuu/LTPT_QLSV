@@ -23,6 +23,9 @@ public class LoginFrame extends JFrame {
     private JButton btnExit;
     private NetworkClient networkClient;
 
+    private static final String SERVER_HOST = "localhost";
+    private static final int SERVER_PORT = 8888;
+
     public LoginFrame() {
         initComponents();
         setupLayout();
@@ -36,16 +39,7 @@ public class LoginFrame extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        // Initialize network client
-        try {
-            networkClient = new NetworkClient("localhost", 8888);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Không thể kết nối tới server!\n" + e.getMessage(),
-                "Lỗi kết nối",
-                JOptionPane.ERROR_MESSAGE);
-            System.exit(1);
-        }
+        // Don't connect here - connect when login button is pressed
     }
 
     private void setupLayout() {
@@ -176,6 +170,20 @@ public class LoginFrame extends JFrame {
         SwingWorker<Response, Void> worker = new SwingWorker<Response, Void>() {
             @Override
             protected Response doInBackground() throws Exception {
+                // Connect to server if not connected
+                if (networkClient == null) {
+                    try {
+                        networkClient = new NetworkClient(SERVER_HOST, SERVER_PORT);
+                    } catch (Exception e) {
+                        throw new Exception("Không thể kết nối đến server tại " + SERVER_HOST + ":" + SERVER_PORT +
+                                          "\n\nVui lòng kiểm tra:\n" +
+                                          "1. Server đã được khởi động chưa?\n" +
+                                          "2. Server đang chạy trên đúng port " + SERVER_PORT + " không?\n" +
+                                          "3. Firewall có chặn kết nối không?\n\n" +
+                                          "Chi tiết lỗi: " + e.getMessage());
+                    }
+                }
+
                 LoginDTO loginDTO = new LoginDTO(username, password);
                 Request request = new Request(Command.LOGIN, loginDTO, null);
                 return networkClient.sendRequest(request);
@@ -207,9 +215,15 @@ public class LoginFrame extends JFrame {
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(LoginFrame.this,
-                        "Lỗi kết nối: " + ex.getMessage(),
-                        "Lỗi",
+                        "Lỗi: " + ex.getMessage(),
+                        "Lỗi kết nối",
                         JOptionPane.ERROR_MESSAGE);
+
+                    // Close failed connection
+                    if (networkClient != null) {
+                        networkClient.close();
+                        networkClient = null;
+                    }
                 } finally {
                     btnLogin.setEnabled(true);
                     btnLogin.setText("Đăng nhập");
@@ -234,4 +248,3 @@ public class LoginFrame extends JFrame {
         });
     }
 }
-

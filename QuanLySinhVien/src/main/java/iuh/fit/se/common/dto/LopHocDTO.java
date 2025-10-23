@@ -12,14 +12,16 @@ public class LopHocDTO implements Serializable {
     private String tenLop;
     private String nienKhoa;
     private String maKhoa;  // Foreign key
+    private String tenKhoa;  // Tên khoa (để hiển thị)
 
     public LopHocDTO() {}
 
-    public LopHocDTO(String maLop, String tenLop, String nienKhoa, String maKhoa) {
+    public LopHocDTO(String maLop, String tenLop, String nienKhoa, String maKhoa, String tenKhoa) {
         this.maLop = maLop;
         this.tenLop = tenLop;
         this.nienKhoa = nienKhoa;
         this.maKhoa = maKhoa;
+        this.tenKhoa = tenKhoa;
     }
 
     public String getMaLop() { return maLop; }
@@ -34,35 +36,11 @@ public class LopHocDTO implements Serializable {
     public String getMaKhoa() { return maKhoa; }
     public void setMaKhoa(String maKhoa) { this.maKhoa = maKhoa; }
 
+    public String getTenKhoa() { return tenKhoa; }
+    public void setTenKhoa(String tenKhoa) { this.tenKhoa = tenKhoa; }
+
     @Override
     public String toString() {
-        return "LopHocDTO{maLop='" + maLop + "', tenLop='" + tenLop + "', nienKhoa='" + nienKhoa + "'}";
+        return "LopHocDTO{maLop='" + maLop + "', tenLop='" + tenLop + "', nienKhoa='" + nienKhoa + "', maKhoa='" + maKhoa + "'}";
     }
 }
-package iuh.fit.se.common.dto;
-
-import java.io.Serializable;
-
-/**
- * DTO cho thông tin đăng nhập
- */
-public class LoginDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    private String username;
-    private String password;
-
-    public LoginDTO() {}
-
-    public LoginDTO(String username, String password) {
-        this.username = username;
-        this.password = password;
-    }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-}
-

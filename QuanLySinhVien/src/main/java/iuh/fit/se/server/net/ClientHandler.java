@@ -20,27 +20,41 @@ import java.util.Map;
 public class ClientHandler implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
     private final Socket clientSocket;
-
-    // Services
-    private final AuthService authService;
-    private final KhoaService khoaService;
-    private final LopHocService lopHocService;
-    private final GiangVienService giangVienService;
-    private final MonHocService monHocService;
-    private final HocKyService hocKyService;
-    private final HocVuService hocVuService;
     private final IStudentService studentService;
+    private final boolean useInMemoryAuth;
 
-    public ClientHandler(Socket clientSocket, IStudentService studentService) {
+    // In-memory auth service (used when SKIP_JPA = true)
+    private InMemoryAuthService inMemoryAuthService;
+
+    // JPA-based services (used when SKIP_JPA = false)
+    private AuthService authService;
+    private KhoaService khoaService;
+    private LopHocService lopHocService;
+    private GiangVienService giangVienService;
+    private MonHocService monHocService;
+    private HocKyService hocKyService;
+    private HocVuService hocVuService;
+
+    public ClientHandler(Socket clientSocket, IStudentService studentService, boolean useInMemoryAuth) {
         this.clientSocket = clientSocket;
         this.studentService = studentService;
-        this.authService = AuthService.getInstance();
-        this.khoaService = KhoaService.getInstance();
-        this.lopHocService = LopHocService.getInstance();
-        this.giangVienService = GiangVienService.getInstance();
-        this.monHocService = MonHocService.getInstance();
-        this.hocKyService = HocKyService.getInstance();
-        this.hocVuService = HocVuService.getInstance();
+        this.useInMemoryAuth = useInMemoryAuth;
+
+        if (useInMemoryAuth) {
+            // Use in-memory mode
+            this.inMemoryAuthService = InMemoryAuthService.getInstance();
+            logger.debug("Using InMemoryAuthService");
+        } else {
+            // Use JPA mode
+            this.authService = AuthService.getInstance();
+            this.khoaService = KhoaService.getInstance();
+            this.lopHocService = LopHocService.getInstance();
+            this.giangVienService = GiangVienService.getInstance();
+            this.monHocService = MonHocService.getInstance();
+            this.hocKyService = HocKyService.getInstance();
+            this.hocVuService = HocVuService.getInstance();
+            logger.debug("Using JPA-based services");
+        }
     }
 
     @Override
@@ -48,8 +62,10 @@ public class ClientHandler implements Runnable {
         String clientAddress = clientSocket.getInetAddress().getHostAddress();
         logger.info("Handling client: {}", clientAddress);
 
-        try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+        try {
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+            out.flush(); // IMPORTANT: flush to send stream header first
+            ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
 
             Object obj;
             while ((obj = in.readObject()) != null) {
@@ -87,23 +103,43 @@ public class ClientHandler implements Runnable {
 
             // BƯỚC 2: Kiểm tra authentication cho các lệnh khác
             String token = req.getAuthToken();
-            if (!authService.validateToken(token)) {
-                return new Response(Status.UNAUTHORIZED, "Chưa đăng nhập hoặc phiên đã hết hạn", null);
-            }
 
-            TaiKhoan account = authService.getAccountByToken(token);
-            if (account == null) {
-                return new Response(Status.UNAUTHORIZED, "Token không hợp lệ", null);
-            }
+            if (useInMemoryAuth) {
+                if (!inMemoryAuthService.validateToken(token)) {
+                    return new Response(Status.UNAUTHORIZED, "Chưa đăng nhập hoặc phiên đã hết hạn", null);
+                }
+                InMemoryAuthService.UserAccount account = inMemoryAuthService.getAccountByToken(token);
+                if (account == null) {
+                    return new Response(Status.UNAUTHORIZED, "Token không hợp lệ", null);
+                }
 
-            // BƯỚC 3: Xử lý LOGOUT
-            if (cmd == Command.LOGOUT) {
-                authService.logout(token);
-                return new Response(Status.SUCCESS, "Đăng xuất thành công", null);
-            }
+                // BƯỚC 3: Xử lý LOGOUT
+                if (cmd == Command.LOGOUT) {
+                    inMemoryAuthService.logout(token);
+                    return new Response(Status.SUCCESS, "Đăng xuất thành công", null);
+                }
 
-            // BƯỚC 4: Xử lý các lệnh theo Command với Authorization
-            return handleAuthenticatedRequest(req, account);
+                // In-memory mode chỉ hỗ trợ quản lý sinh viên cơ bản
+                return handleInMemoryRequest(req, account);
+
+            } else {
+                if (!authService.validateToken(token)) {
+                    return new Response(Status.UNAUTHORIZED, "Chưa đăng nhập hoặc phiên đã hết hạn", null);
+                }
+                TaiKhoan account = authService.getAccountByToken(token);
+                if (account == null) {
+                    return new Response(Status.UNAUTHORIZED, "Token không hợp lệ", null);
+                }
+
+                // BƯỚC 3: Xử lý LOGOUT
+                if (cmd == Command.LOGOUT) {
+                    authService.logout(token);
+                    return new Response(Status.SUCCESS, "Đăng xuất thành công", null);
+                }
+
+                // BƯỚC 4: Xử lý các lệnh theo Command với Authorization
+                return handleAuthenticatedRequest(req, account);
+            }
 
         } catch (Exception e) {
             logger.error("Error handling request: {}", e.getMessage(), e);
@@ -115,7 +151,13 @@ public class ClientHandler implements Runnable {
         try {
             if (req.getData() instanceof LoginDTO) {
                 LoginDTO loginDTO = (LoginDTO) req.getData();
-                AuthResponseDTO authResponse = authService.login(loginDTO.getUsername(), loginDTO.getPassword());
+
+                AuthResponseDTO authResponse;
+                if (useInMemoryAuth) {
+                    authResponse = inMemoryAuthService.login(loginDTO.getUsername(), loginDTO.getPassword());
+                } else {
+                    authResponse = authService.login(loginDTO.getUsername(), loginDTO.getPassword());
+                }
 
                 if (authResponse.isSuccess()) {
                     return new Response(Status.SUCCESS, authResponse.getMessage(), authResponse);
@@ -128,6 +170,53 @@ public class ClientHandler implements Runnable {
         } catch (Exception e) {
             logger.error("Login error", e);
             return new Response(Status.ERROR, "Lỗi đăng nhập: " + e.getMessage(), null);
+        }
+    }
+
+    private Response handleInMemoryRequest(Request req, InMemoryAuthService.UserAccount account) {
+        Command cmd = req.getCommand();
+        UserRole role = account.getRole();
+
+        try {
+            switch (cmd) {
+                case ADD_STUDENT:
+                case SINHVIEN_ADD:
+                    if (role != UserRole.ADMIN) return forbidden();
+                    boolean added = studentService.addStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    return added ? new Response(Status.SUCCESS, "Thêm sinh viên thành công", null)
+                                 : new Response(Status.ERROR, "Thêm thất bại", null);
+
+                case FIND_STUDENT_BY_ID:
+                case SINHVIEN_GET_BY_ID:
+                    iuh.fit.se.common.model.SinhVienDTO sv = studentService.findStudentById((String) req.getData());
+                    return sv != null ? new Response(Status.SUCCESS, "Tìm thấy sinh viên", sv)
+                                      : new Response(Status.NOT_FOUND, "Không tìm thấy sinh viên", null);
+
+                case GET_ALL_STUDENTS:
+                case SINHVIEN_GET_ALL_BY_LOPHOC:
+                    List<iuh.fit.se.common.model.SinhVienDTO> all = studentService.getAllStudents();
+                    return new Response(Status.SUCCESS, "Danh sách sinh viên", all);
+
+                case UPDATE_STUDENT:
+                case SINHVIEN_UPDATE:
+                    if (role != UserRole.ADMIN) return forbidden();
+                    boolean updated = studentService.updateStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    return updated ? new Response(Status.SUCCESS, "Cập nhật thành công", null)
+                                   : new Response(Status.NOT_FOUND, "Cập nhật thất bại", null);
+
+                case DELETE_STUDENT:
+                case SINHVIEN_DELETE:
+                    if (role != UserRole.ADMIN) return forbidden();
+                    boolean svDeleted = studentService.deleteStudent((String) req.getData());
+                    return svDeleted ? new Response(Status.SUCCESS, "Xóa thành công", null)
+                                     : new Response(Status.NOT_FOUND, "Xóa thất bại", null);
+
+                default:
+                    return new Response(Status.ERROR, "Chức năng này chỉ khả dụng ở chế độ JPA (với SQL Server)", null);
+            }
+        } catch (Exception e) {
+            logger.error("Error handling command {}", cmd, e);
+            return new Response(Status.ERROR, "Lỗi xử lý: " + e.getMessage(), null);
         }
     }
 

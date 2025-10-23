@@ -15,17 +15,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    private static final int PORT = 8888; // ĐỔI PORT từ 8080 → 8888
+    private static final int PORT = 8888;
     private static final int THREAD_POOL_SIZE = 10;
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
-    // Flag để bỏ qua JPA (set = true nếu không có SQL Server)
-    private static final boolean SKIP_JPA = true; // ĐẶT true để dùng in-memory mode ngay
+    // QUAN TRỌNG: Đặt true để bỏ qua SQL Server và dùng in-memory (để test nhanh)
+    // Đặt false để sử dụng JPA với SQL Server
+    private static final boolean SKIP_JPA = true; // ĐỔI thành true để test nhanh
 
     private static ExecutorService executorService;
 
     public static void main(String[] args) {
-        logger.info("Starting server...");
+        logger.info("Starting server on port {}...", PORT);
 
         IStudentService studentService;
         EntityManagerFactory emf = null;
@@ -35,12 +36,20 @@ public class Server {
             studentService = new StudentService();
         } else {
             try {
-                // Try to create EMF (will fail if JPA deps or configuration missing)
+                // Khởi tạo JPA EntityManagerFactory
+                logger.info("Initializing JPA with SQL Server...");
                 emf = Persistence.createEntityManagerFactory("StudentPU_SQLServer");
                 studentService = new JpaStudentServiceAdapter(emf);
-                logger.info("Using JPA-backed StudentService");
+                logger.info("✓ JPA initialized successfully with SQL Server");
+                logger.info("✓ All Service singletons will be initialized on first use");
             } catch (Throwable t) {
-                logger.warn("Cannot initialize JPA EntityManagerFactory (falling back to in-memory). Reason: {}", t.getMessage());
+                logger.error("✗ Cannot initialize JPA EntityManagerFactory!", t);
+                logger.error("Please check:");
+                logger.error("  1. SQL Server is running");
+                logger.error("  2. Database 'db_quanlysinhvien' exists");
+                logger.error("  3. Connection string in persistence.xml is correct");
+                logger.error("  4. Username/Password are correct");
+                logger.error("\nFalling back to in-memory mode...");
                 studentService = new StudentService();
             }
         }
@@ -50,24 +59,39 @@ public class Server {
         final EntityManagerFactory finalEmf = emf;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info("Shutting down server...");
-            if (executorService != null) executorService.shutdown();
+            if (executorService != null) {
+                executorService.shutdown();
+                logger.info("Thread pool stopped");
+            }
             if (finalEmf != null && finalEmf.isOpen()) {
                 finalEmf.close();
-                logger.info("Closed EntityManagerFactory");
+                logger.info("EntityManagerFactory closed");
             }
             logger.info("Server stopped.");
         }));
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            logger.info("Server listening on port {}", PORT);
+            logger.info("========================================");
+            logger.info("✓ Server started successfully!");
+            logger.info("✓ Listening on port: {}", PORT);
+            logger.info("✓ Thread pool size: {}", THREAD_POOL_SIZE);
+            logger.info("✓ JPA mode: {}", SKIP_JPA ? "DISABLED (in-memory)" : "ENABLED (SQL Server)");
+            logger.info("========================================");
+            logger.info("Waiting for clients...");
+
             //noinspection InfiniteLoopStatement
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                logger.info("New client connected: {}", clientSocket.getInetAddress());
-                executorService.submit(new ClientHandler(clientSocket, studentService));
+                logger.info("→ New client connected: {} (Port: {})",
+                    clientSocket.getInetAddress().getHostAddress(),
+                    clientSocket.getPort());
+
+                // Submit client handler to thread pool
+                executorService.submit(new ClientHandler(clientSocket, studentService, SKIP_JPA));
             }
         } catch (Exception e) {
-            logger.error("Server error: {}", e.getMessage(), e);
+            logger.error("✗ Server error: {}", e.getMessage(), e);
+            System.exit(1);
         }
     }
 }
