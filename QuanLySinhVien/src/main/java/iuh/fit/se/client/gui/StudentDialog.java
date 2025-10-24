@@ -1,8 +1,8 @@
 package iuh.fit.se.client.gui;
 
 import iuh.fit.se.client.net.NetworkClient;
+import iuh.fit.se.common.dto.SinhVienDTO;
 import iuh.fit.se.common.model.Gender;
-import iuh.fit.se.common.model.SinhVienDTO;
 import iuh.fit.se.common.protocol.Command;
 import iuh.fit.se.common.protocol.Request;
 import iuh.fit.se.common.protocol.Response;
@@ -269,4 +269,3 @@ public class StudentDialog extends JDialog {
         return success;
     }
 }
-

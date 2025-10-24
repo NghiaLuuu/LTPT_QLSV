@@ -16,6 +16,11 @@ public class LopHocPhanDTO implements Serializable {
     private String maHocKy;
     private String tenHocKy;
     private int soLuongToiDa;
+    private String thu;           // Thứ trong tuần (2-7, CN)
+    private String tiet;          // Tiết học (1-10)
+    private String phongHoc;      // Phòng học
+    private String namHoc;        // Năm học
+    private int siSo;             // Số sinh viên đã đăng ký
 
     public LopHocPhanDTO() {
     }
@@ -96,6 +101,46 @@ public class LopHocPhanDTO implements Serializable {
         this.soLuongToiDa = soLuongToiDa;
     }
 
+    public String getThu() {
+        return thu;
+    }
+
+    public void setThu(String thu) {
+        this.thu = thu;
+    }
+
+    public String getTiet() {
+        return tiet;
+    }
+
+    public void setTiet(String tiet) {
+        this.tiet = tiet;
+    }
+
+    public String getPhongHoc() {
+        return phongHoc;
+    }
+
+    public void setPhongHoc(String phongHoc) {
+        this.phongHoc = phongHoc;
+    }
+
+    public String getNamHoc() {
+        return namHoc;
+    }
+
+    public void setNamHoc(String namHoc) {
+        this.namHoc = namHoc;
+    }
+
+    public int getSiSo() {
+        return siSo;
+    }
+
+    public void setSiSo(int siSo) {
+        this.siSo = siSo;
+    }
+
     @Override
     public String toString() {
         return "LopHocPhanDTO{" +
@@ -107,4 +152,3 @@ public class LopHocPhanDTO implements Serializable {
                 '}';
     }
 }
-

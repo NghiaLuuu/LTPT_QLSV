@@ -1,8 +1,12 @@
-package iuh.fit.se.common.model;
+package iuh.fit.se.common.dto;
 
+import iuh.fit.se.common.model.Gender;
 import java.io.Serializable;
 import java.time.LocalDate;
 
+/**
+ * DTO cho Sinh viên
+ */
 public class SinhVienDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 

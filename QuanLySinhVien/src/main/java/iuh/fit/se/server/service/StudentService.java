@@ -1,6 +1,6 @@
 package iuh.fit.se.server.service;
 
-import iuh.fit.se.common.model.SinhVienDTO;
+import iuh.fit.se.common.dto.SinhVienDTO;
 
 import java.util.ArrayList;
 import java.util.List;

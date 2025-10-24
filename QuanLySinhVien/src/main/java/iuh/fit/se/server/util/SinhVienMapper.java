@@ -2,7 +2,7 @@ package iuh.fit.se.server.util;
 
 import iuh.fit.se.common.model.Gender;
 import iuh.fit.se.common.model.SinhVien;
-import iuh.fit.se.common.model.SinhVienDTO;
+import iuh.fit.se.common.dto.SinhVienDTO;
 
 public class SinhVienMapper {
 

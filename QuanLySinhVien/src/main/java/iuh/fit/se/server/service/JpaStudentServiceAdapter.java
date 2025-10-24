@@ -1,7 +1,7 @@
 package iuh.fit.se.server.service;
 
 import iuh.fit.se.common.model.SinhVien;
-import iuh.fit.se.common.model.SinhVienDTO;
+import iuh.fit.se.common.dto.SinhVienDTO;
 import iuh.fit.se.server.util.SinhVienMapper;
 
 import javax.persistence.EntityManagerFactory;

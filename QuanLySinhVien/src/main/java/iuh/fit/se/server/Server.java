@@ -1,9 +1,11 @@
 package iuh.fit.se.server;
 
 import iuh.fit.se.server.net.ClientHandler;
+import iuh.fit.se.server.service.AuthService;
 import iuh.fit.se.server.service.IStudentService;
 import iuh.fit.se.server.service.JpaStudentServiceAdapter;
 import iuh.fit.se.server.service.StudentService;
+import iuh.fit.se.server.util.DataSeeder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ public class Server {
 
     // QUAN TRỌNG: Đặt true để bỏ qua SQL Server và dùng in-memory (để test nhanh)
     // Đặt false để sử dụng JPA với SQL Server
-    private static final boolean SKIP_JPA = true; // ĐỔI thành true để test nhanh
+    private static final boolean SKIP_JPA = false; // Đổi thành false để kết nối SQL Server
 
     private static ExecutorService executorService;
 
@@ -42,6 +44,20 @@ public class Server {
                 studentService = new JpaStudentServiceAdapter(emf);
                 logger.info("✓ JPA initialized successfully with SQL Server");
                 logger.info("✓ All Service singletons will be initialized on first use");
+
+                // Khởi tạo tài khoản admin mặc định nếu chưa có
+                try {
+                    AuthService.getInstance().initializeDefaultAdmin();
+                } catch (Exception e) {
+                    logger.warn("Could not initialize default admin account: {}", e.getMessage());
+                }
+
+                // Seed dữ liệu mẫu (10 sinh viên, 10 giảng viên)
+                try {
+                    DataSeeder.seedAll(studentService);
+                } catch (Exception e) {
+                    logger.warn("Could not seed sample data: {}", e.getMessage());
+                }
             } catch (Throwable t) {
                 logger.error("✗ Cannot initialize JPA EntityManagerFactory!", t);
                 logger.error("Please check:");

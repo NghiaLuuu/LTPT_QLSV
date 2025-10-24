@@ -182,25 +182,25 @@ public class ClientHandler implements Runnable {
                 case ADD_STUDENT:
                 case SINHVIEN_ADD:
                     if (role != UserRole.ADMIN) return forbidden();
-                    boolean added = studentService.addStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    boolean added = studentService.addStudent((SinhVienDTO) req.getData());
                     return added ? new Response(Status.SUCCESS, "Thêm sinh viên thành công", null)
                                  : new Response(Status.ERROR, "Thêm thất bại", null);
 
                 case FIND_STUDENT_BY_ID:
                 case SINHVIEN_GET_BY_ID:
-                    iuh.fit.se.common.model.SinhVienDTO sv = studentService.findStudentById((String) req.getData());
+                    SinhVienDTO sv = studentService.findStudentById((String) req.getData());
                     return sv != null ? new Response(Status.SUCCESS, "Tìm thấy sinh viên", sv)
                                       : new Response(Status.NOT_FOUND, "Không tìm thấy sinh viên", null);
 
                 case GET_ALL_STUDENTS:
                 case SINHVIEN_GET_ALL_BY_LOPHOC:
-                    List<iuh.fit.se.common.model.SinhVienDTO> all = studentService.getAllStudents();
+                    List<SinhVienDTO> all = studentService.getAllStudents();
                     return new Response(Status.SUCCESS, "Danh sách sinh viên", all);
 
                 case UPDATE_STUDENT:
                 case SINHVIEN_UPDATE:
                     if (role != UserRole.ADMIN) return forbidden();
-                    boolean updated = studentService.updateStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    boolean updated = studentService.updateStudent((SinhVienDTO) req.getData());
                     return updated ? new Response(Status.SUCCESS, "Cập nhật thành công", null)
                                    : new Response(Status.NOT_FOUND, "Cập nhật thất bại", null);
 
@@ -272,6 +272,10 @@ public class ClientHandler implements Runnable {
                     return new Response(Status.SUCCESS, "Danh sách lớp học",
                         lopHocService.getAllLopHocByKhoa((String) req.getData()));
 
+                case LOPHOC_GET_ALL:
+                    return new Response(Status.SUCCESS, "Danh sách tất cả lớp học",
+                        lopHocService.getAllLopHoc());
+
                 // ==================== QUẢN LÝ GIẢNG VIÊN ====================
                 case GIANGVIEN_ADD:
                     if (role != UserRole.ADMIN) return forbidden();
@@ -293,6 +297,10 @@ public class ClientHandler implements Runnable {
                     return new Response(Status.SUCCESS, "Danh sách giảng viên",
                         giangVienService.getAllGiangVienByKhoa((String) req.getData()));
 
+                case GIANGVIEN_GET_ALL:
+                    return new Response(Status.SUCCESS, "Danh sách tất cả giảng viên",
+                        giangVienService.getAllGiangVien());
+
                 // ==================== QUẢN LÝ MÔN HỌC ====================
                 case MONHOC_ADD:
                     if (role != UserRole.ADMIN) return forbidden();
@@ -313,6 +321,10 @@ public class ClientHandler implements Runnable {
                 case MONHOC_GET_ALL_BY_KHOA:
                     return new Response(Status.SUCCESS, "Danh sách môn học",
                         monHocService.getAllMonHocByKhoa((String) req.getData()));
+
+                case MONHOC_GET_ALL:
+                    return new Response(Status.SUCCESS, "Danh sách tất cả môn học",
+                        monHocService.getAllMonHoc());
 
                 // ==================== QUẢN LÝ HỌC KỲ ====================
                 case HOCKY_ADD:
@@ -403,25 +415,25 @@ public class ClientHandler implements Runnable {
                 case ADD_STUDENT:
                 case SINHVIEN_ADD:
                     if (role != UserRole.ADMIN) return forbidden();
-                    boolean added = studentService.addStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    boolean added = studentService.addStudent((SinhVienDTO) req.getData());
                     return added ? new Response(Status.SUCCESS, "Thêm sinh viên thành công", null)
                                  : new Response(Status.ERROR, "Thêm thất bại", null);
 
                 case FIND_STUDENT_BY_ID:
                 case SINHVIEN_GET_BY_ID:
-                    iuh.fit.se.common.model.SinhVienDTO sv = studentService.findStudentById((String) req.getData());
+                    SinhVienDTO sv = studentService.findStudentById((String) req.getData());
                     return sv != null ? new Response(Status.SUCCESS, "Tìm thấy sinh viên", sv)
                                       : new Response(Status.NOT_FOUND, "Không tìm thấy sinh viên", null);
 
                 case GET_ALL_STUDENTS:
                 case SINHVIEN_GET_ALL_BY_LOPHOC:
-                    List<iuh.fit.se.common.model.SinhVienDTO> all = studentService.getAllStudents();
+                    List<SinhVienDTO> all = studentService.getAllStudents();
                     return new Response(Status.SUCCESS, "Danh sách sinh viên", all);
 
                 case UPDATE_STUDENT:
                 case SINHVIEN_UPDATE:
                     if (role != UserRole.ADMIN) return forbidden();
-                    boolean updated = studentService.updateStudent((iuh.fit.se.common.model.SinhVienDTO) req.getData());
+                    boolean updated = studentService.updateStudent((SinhVienDTO) req.getData());
                     return updated ? new Response(Status.SUCCESS, "Cập nhật thành công", null)
                                    : new Response(Status.NOT_FOUND, "Cập nhật thất bại", null);
 

@@ -1,6 +1,6 @@
 package iuh.fit.se.server.service;
 
-import iuh.fit.se.common.model.SinhVienDTO;
+import iuh.fit.se.common.dto.SinhVienDTO;
 
 import java.util.List;
 
@@ -11,4 +11,3 @@ public interface IStudentService {
     boolean updateStudent(SinhVienDTO sv);
     boolean deleteStudent(String maSV);
 }
-

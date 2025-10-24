@@ -1,20 +1,21 @@
 package iuh.fit.se.client.gui;
 
 import iuh.fit.se.common.dto.AuthResponseDTO;
-import iuh.fit.se.common.model.UserRole;
+import iuh.fit.se.client.net.NetworkClient;
+import iuh.fit.se.client.gui.panels.student.StudentProfilePanel;
+import iuh.fit.se.client.gui.panels.student.StudentCourseRegistrationPanel;
+import iuh.fit.se.client.gui.panels.student.StudentRegisteredCoursesPanel;
+import iuh.fit.se.client.gui.panels.student.StudentTranscriptPanel;
 import iuh.fit.se.common.protocol.Command;
 import iuh.fit.se.common.protocol.Request;
-import iuh.fit.se.common.protocol.Response;
-import iuh.fit.se.client.net.NetworkClient;
-import iuh.fit.se.client.gui.panels.*;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Màn hình chính cho Admin - Quản lý toàn bộ hệ thống
+ * Màn hình chính cho Sinh viên
  */
-public class AdminMainFrame extends JFrame {
+public class StudentMainFrame extends JFrame {
     private AuthResponseDTO authResponse;
     private NetworkClient networkClient;
     private JTabbedPane tabbedPane;
@@ -26,15 +27,12 @@ public class AdminMainFrame extends JFrame {
     private static final Color TAB_BG = new Color(236, 240, 241);
 
     // Panels
-    private KhoaPanel khoaPanel;
-    private LopHocPanel lopHocPanel;
-    private GiangVienPanel giangVienPanel;
-    private MonHocPanel monHocPanel;
-    private HocKyPanel hocKyPanel;
-    private SinhVienPanel sinhVienPanel;
-    private LopHocPhanPanel lopHocPhanPanel;
+    private StudentProfilePanel profilePanel;
+    private StudentCourseRegistrationPanel registrationPanel;
+    private StudentRegisteredCoursesPanel registeredCoursesPanel;
+    private StudentTranscriptPanel transcriptPanel;
 
-    public AdminMainFrame(AuthResponseDTO authResponse, NetworkClient networkClient) {
+    public StudentMainFrame(AuthResponseDTO authResponse, NetworkClient networkClient) {
         this.authResponse = authResponse;
         this.networkClient = networkClient;
 
@@ -44,8 +42,7 @@ public class AdminMainFrame extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("🎓 Hệ thống Quản lý Đào tạo - " + authResponse.getUsername() +
-                 " (" + getRoleDisplayName() + ")");
+        setTitle("🎓 Hệ thống Quản lý Đào tạo - Sinh viên: " + authResponse.getUsername());
         setSize(1400, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -59,7 +56,6 @@ public class AdminMainFrame extends JFrame {
             e.printStackTrace();
         }
 
-        // Create modern tabbed pane
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         tabbedPane.setBackground(TAB_BG);
@@ -73,25 +69,16 @@ public class AdminMainFrame extends JFrame {
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        // Create panels based on role
-        if (authResponse.getRole() == UserRole.ADMIN) {
-            // Admin has access to all panels
-            khoaPanel = new KhoaPanel(networkClient, authResponse.getAuthToken());
-            lopHocPanel = new LopHocPanel(networkClient, authResponse.getAuthToken());
-            giangVienPanel = new GiangVienPanel(networkClient, authResponse.getAuthToken());
-            monHocPanel = new MonHocPanel(networkClient, authResponse.getAuthToken());
-            hocKyPanel = new HocKyPanel(networkClient, authResponse.getAuthToken());
-            sinhVienPanel = new SinhVienPanel(networkClient, authResponse.getAuthToken());
-            lopHocPhanPanel = new LopHocPhanPanel(networkClient, authResponse.getAuthToken());
+        // Create panels for student
+        profilePanel = new StudentProfilePanel(networkClient, authResponse);
+        registrationPanel = new StudentCourseRegistrationPanel(networkClient, authResponse);
+        registeredCoursesPanel = new StudentRegisteredCoursesPanel(networkClient, authResponse);
+        transcriptPanel = new StudentTranscriptPanel(networkClient, authResponse);
 
-            tabbedPane.addTab("  📚 Quản lý Khoa  ", khoaPanel);
-            tabbedPane.addTab("  🏫 Quản lý Lớp học  ", lopHocPanel);
-            tabbedPane.addTab("  👨‍🏫 Quản lý Giảng viên  ", giangVienPanel);
-            tabbedPane.addTab("  📖 Quản lý Môn học  ", monHocPanel);
-            tabbedPane.addTab("  📅 Quản lý Học kỳ  ", hocKyPanel);
-            tabbedPane.addTab("  👨‍🎓 Quản lý Sinh viên  ", sinhVienPanel);
-            tabbedPane.addTab("  🎓 Quản lý Lớp học phần  ", lopHocPhanPanel);
-        }
+        tabbedPane.addTab("  👤 Thông tin cá nhân  ", profilePanel);
+        tabbedPane.addTab("  📅 Đăng ký học phần  ", registrationPanel);
+        tabbedPane.addTab("  📖 Lớp đã đăng ký  ", registeredCoursesPanel);
+        tabbedPane.addTab("  🎓 Bảng điểm  ", transcriptPanel);
 
         add(tabbedPane, BorderLayout.CENTER);
 
@@ -109,18 +96,18 @@ public class AdminMainFrame extends JFrame {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         leftPanel.setBackground(HEADER_BG);
 
-        JLabel iconLabel = new JLabel("🎓");
+        JLabel iconLabel = new JLabel("👨‍🎓");
         iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32));
 
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         titlePanel.setBackground(HEADER_BG);
 
-        JLabel titleLabel = new JLabel("HỆ THỐNG QUẢN LÝ ĐÀO TẠO");
+        JLabel titleLabel = new JLabel("SINH VIÊN");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(Color.WHITE);
 
-        JLabel subtitleLabel = new JLabel("Phiên bản 2.0 - Kiến trúc Client-Server");
+        JLabel subtitleLabel = new JLabel("Quản lý học tập và đăng ký học phần");
         subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subtitleLabel.setForeground(new Color(189, 195, 199));
 
@@ -138,7 +125,7 @@ public class AdminMainFrame extends JFrame {
         userLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         userLabel.setForeground(Color.WHITE);
 
-        JLabel roleLabel = new JLabel("• " + getRoleDisplayName());
+        JLabel roleLabel = new JLabel("• Mã SV: " + authResponse.getMaSV());
         roleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         roleLabel.setForeground(new Color(46, 204, 113));
 
@@ -205,6 +192,10 @@ public class AdminMainFrame extends JFrame {
         itemRefresh.setAccelerator(KeyStroke.getKeyStroke("F5"));
         itemRefresh.addActionListener(e -> refreshCurrentTab());
 
+        JMenuItem itemChangePassword = new JMenuItem("🔑 Đổi mật khẩu");
+        itemChangePassword.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        itemChangePassword.addActionListener(e -> changePassword());
+
         JMenuItem itemLogout = new JMenuItem("🚪 Đăng xuất");
         itemLogout.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         itemLogout.setAccelerator(KeyStroke.getKeyStroke("ctrl Q"));
@@ -216,6 +207,7 @@ public class AdminMainFrame extends JFrame {
         itemExit.addActionListener(e -> exit());
 
         menuFile.add(itemRefresh);
+        menuFile.add(itemChangePassword);
         menuFile.addSeparator();
         menuFile.add(itemLogout);
         menuFile.add(itemExit);
@@ -238,7 +230,6 @@ public class AdminMainFrame extends JFrame {
     }
 
     private void refreshCurrentTab() {
-        int selectedIndex = tabbedPane.getSelectedIndex();
         Component selectedComponent = tabbedPane.getSelectedComponent();
 
         if (selectedComponent instanceof RefreshablePanel) {
@@ -250,6 +241,13 @@ public class AdminMainFrame extends JFrame {
         }
     }
 
+    private void changePassword() {
+        JOptionPane.showMessageDialog(this,
+            "Chức năng đổi mật khẩu sẽ được bổ sung sau!",
+            "Thông báo",
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void logout() {
         int choice = JOptionPane.showConfirmDialog(this,
             "Bạn có chắc chắn muốn đăng xuất?",
@@ -258,7 +256,6 @@ public class AdminMainFrame extends JFrame {
             JOptionPane.QUESTION_MESSAGE);
 
         if (choice == JOptionPane.YES_OPTION) {
-            // Send logout request
             try {
                 Request request = new Request(Command.LOGOUT, null, authResponse.getAuthToken());
                 networkClient.sendRequest(request);
@@ -266,10 +263,8 @@ public class AdminMainFrame extends JFrame {
                 ex.printStackTrace();
             }
 
-            // Close current frame
             dispose();
 
-            // Open login frame
             SwingUtilities.invokeLater(() -> {
                 LoginFrame loginFrame = new LoginFrame();
                 loginFrame.setVisible(true);
@@ -285,7 +280,6 @@ public class AdminMainFrame extends JFrame {
             JOptionPane.QUESTION_MESSAGE);
 
         if (choice == JOptionPane.YES_OPTION) {
-            // Send logout request
             try {
                 Request request = new Request(Command.LOGOUT, null, authResponse.getAuthToken());
                 networkClient.sendRequest(request);
@@ -300,7 +294,7 @@ public class AdminMainFrame extends JFrame {
 
     private void showAbout() {
         JDialog dialog = new JDialog(this, "Về chương trình", true);
-        dialog.setSize(450, 400);
+        dialog.setSize(450, 350);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -308,25 +302,22 @@ public class AdminMainFrame extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
         panel.setBackground(Color.WHITE);
 
-        JLabel iconLabel = new JLabel("🎓");
+        JLabel iconLabel = new JLabel("👨‍🎓");
         iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 50));
         iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel("HỆ THỐNG QUẢN LÝ ĐÀO TẠO");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        JLabel titleLabel = new JLabel("SINH VIÊN - HỆ THỐNG QUẢN LÝ ĐÀO TẠO");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setForeground(HEADER_BG);
 
         JTextArea textArea = new JTextArea();
-        textArea.setText("\nPhiên bản: 2.0 (Nâng cao)\n" +
-                        "Kiến trúc: Client-Server\n" +
-                        "Công nghệ: Java Socket + JPA + SQL Server\n\n" +
-                        "Tính năng:\n" +
-                        "• Quản lý Khoa, Lớp, Môn học\n" +
-                        "• Quản lý Giảng viên, Sinh viên\n" +
-                        "• Quản lý Lớp học phần\n" +
-                        "• Đăng ký học phần, Nhập điểm\n" +
-                        "• Phân quyền theo vai trò\n\n" +
+        textArea.setText("\nPhiên bản: 2.0\n" +
+                        "Chức năng:\n" +
+                        "• Xem thông tin cá nhân\n" +
+                        "• Đăng ký học phần\n" +
+                        "• Xem bảng điểm\n" +
+                        "• Theo dõi kết quả học tập\n\n" +
                         "© 2024 - IUH University");
         textArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         textArea.setEditable(false);
@@ -356,17 +347,8 @@ public class AdminMainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    private String getRoleDisplayName() {
-        switch (authResponse.getRole()) {
-            case ADMIN: return "Quản trị viên";
-            case GIANG_VIEN: return "Giảng viên";
-            case SINH_VIEN: return "Sinh viên";
-            default: return "Không xác định";
-        }
-    }
-
     /**
-     * Interface for panels that can be refreshed
+     * Interface để các panel có thể refresh
      */
     public interface RefreshablePanel {
         void refresh();

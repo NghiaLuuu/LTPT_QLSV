@@ -43,6 +43,13 @@
       <version>2.0.1.Final</version>
     </dependency>
 
+    <!-- Expression Language (EL) - Required by Hibernate Validator -->
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>jakarta.el</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+
     <!-- Microsoft SQL Server JDBC driver -->
     <dependency>
       <groupId>com.microsoft.sqlserver</groupId>

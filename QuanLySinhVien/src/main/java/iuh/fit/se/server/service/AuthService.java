@@ -2,6 +2,7 @@ package iuh.fit.se.server.service;
 
 import iuh.fit.se.common.dto.AuthResponseDTO;
 import iuh.fit.se.common.model.TaiKhoan;
+import iuh.fit.se.common.model.UserRole;
 import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -179,10 +180,150 @@ public class AuthService {
         }
     }
 
+    /**
+     * Khởi tạo tài khoản admin mặc định nếu chưa có
+     * Username: admin
+     * Password: admin123
+     */
+    public void initializeDefaultAdmin() {
+        EntityManager em = emf.createEntityManager();
+        try {
+            // Kiểm tra xem đã có tài khoản admin chưa
+            TaiKhoan existingAdmin = em.createQuery(
+                "SELECT t FROM TaiKhoan t WHERE t.username = :username", TaiKhoan.class)
+                .setParameter("username", "admin")
+                .getResultList()
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+            if (existingAdmin == null) {
+                // Chưa có admin, tạo mới
+                logger.info("No admin account found. Creating default admin account...");
+
+                em.getTransaction().begin();
+
+                TaiKhoan adminAccount = new TaiKhoan();
+                adminAccount.setUsername("admin");
+                adminAccount.setPassword(BCrypt.hashpw("admin123", BCrypt.gensalt(12)));
+                adminAccount.setRole(UserRole.ADMIN);
+
+                em.persist(adminAccount);
+                em.getTransaction().commit();
+
+                logger.info("========================================");
+                logger.info("✓ Default admin account created!");
+                logger.info("  Username: admin");
+                logger.info("  Password: admin123");
+                logger.info("========================================");
+            } else {
+                logger.info("Admin account already exists.");
+            }
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            logger.error("Error initializing default admin account", e);
+        } finally {
+            em.close();
+        }
+    }
+
     public void shutdown() {
         if (emf != null && emf.isOpen()) {
             emf.close();
         }
     }
-}
 
+    /**
+     * Tạo tài khoản cho sinh viên
+     */
+    public TaiKhoan createStudentAccount(String username, String password, String maSV) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            // Kiểm tra username đã tồn tại chưa
+            try {
+                TaiKhoan existing = em.createQuery("SELECT t FROM TaiKhoan t WHERE t.username = :username", TaiKhoan.class)
+                    .setParameter("username", username)
+                    .getSingleResult();
+                throw new RuntimeException("Username '" + username + "' đã tồn tại");
+            } catch (NoResultException e) {
+                // Username chưa tồn tại, OK để tạo mới
+            }
+
+            // Tìm sinh viên
+            iuh.fit.se.common.model.SinhVien sinhVien = em.createQuery("SELECT s FROM SinhVien s WHERE s.maSV = :maSV", iuh.fit.se.common.model.SinhVien.class)
+                .setParameter("maSV", maSV)
+                .getSingleResult();
+
+            // Tạo tài khoản mới
+            TaiKhoan taiKhoan = new TaiKhoan();
+            taiKhoan.setUsername(username);
+            taiKhoan.setPassword(BCrypt.hashpw(password, BCrypt.gensalt(12)));
+            taiKhoan.setRole(UserRole.SINH_VIEN);
+            taiKhoan.setSinhVien(sinhVien);
+
+            em.persist(taiKhoan);
+            em.getTransaction().commit();
+
+            logger.info("Created student account: {} for {}", username, maSV);
+            return taiKhoan;
+
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new RuntimeException("Lỗi tạo tài khoản sinh viên: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Tạo tài khoản cho giảng viên
+     */
+    public TaiKhoan createTeacherAccount(String username, String password, String maGV) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            // Kiểm tra username đã tồn tại chưa
+            try {
+                TaiKhoan existing = em.createQuery("SELECT t FROM TaiKhoan t WHERE t.username = :username", TaiKhoan.class)
+                    .setParameter("username", username)
+                    .getSingleResult();
+                throw new RuntimeException("Username '" + username + "' đã tồn tại");
+            } catch (NoResultException e) {
+                // Username chưa tồn tại, OK để tạo mới
+            }
+
+            // Tìm giảng viên
+            iuh.fit.se.common.model.GiangVien giangVien = em.createQuery("SELECT g FROM GiangVien g WHERE g.maGV = :maGV", iuh.fit.se.common.model.GiangVien.class)
+                .setParameter("maGV", maGV)
+                .getSingleResult();
+
+            // Tạo tài khoản mới
+            TaiKhoan taiKhoan = new TaiKhoan();
+            taiKhoan.setUsername(username);
+            taiKhoan.setPassword(BCrypt.hashpw(password, BCrypt.gensalt(12)));
+            taiKhoan.setRole(UserRole.GIANG_VIEN);
+            taiKhoan.setGiangVien(giangVien);
+
+            em.persist(taiKhoan);
+            em.getTransaction().commit();
+
+            logger.info("Created teacher account: {} for {}", username, maGV);
+            return taiKhoan;
+
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new RuntimeException("Lỗi tạo tài khoản giảng viên: " + e.getMessage());
+        } finally {
+            em.close();
+        }
+    }
+}

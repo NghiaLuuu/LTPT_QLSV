@@ -1,8 +1,8 @@
 package iuh.fit.se.client;
 
 import iuh.fit.se.client.net.NetworkClient;
+import iuh.fit.se.common.dto.SinhVienDTO;
 import iuh.fit.se.common.model.Gender;
-import iuh.fit.se.common.model.SinhVienDTO;
 import iuh.fit.se.common.protocol.Command;
 import iuh.fit.se.common.protocol.Request;
 import iuh.fit.se.common.protocol.Response;
@@ -69,7 +69,7 @@ public class Client {
     private static void showMenu() {
         System.out.println("╔═══════════════════════════════════════╗");
         System.out.println("║   HỆ THỐNG QUẢN LÝ SINH VIÊN         ║");
-        System.out.println("╠═══════════════════════════════════════╣");
+        System.out.println("╠═══════════════════════════════���═══════╣");
         System.out.println("║ 1. Thêm sinh viên                     ║");
         System.out.println("║ 2. Cập nhật sinh viên                 ║");
         System.out.println("║ 3. Xóa sinh viên                      ║");
