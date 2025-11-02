@@ -74,9 +74,13 @@ public class SecurityConfig {
                 );
 
         http.authenticationProvider(authenticationProvider());
-        // Apply rate limiting and auth token filter before the UsernamePasswordAuthenticationFilter
+
+        // ✅ ENABLE lại RateLimitFilter
         http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
+        System.out.println("✅ [SECURITY] RateLimitFilter và AuthTokenFilter đã được enabled");
+        System.out.println("⚠️  [SECURITY] Redis token verification đã bị DISABLED trong AuthTokenFilter để tránh conflict với WebSocket");
 
         return http.build();
     }

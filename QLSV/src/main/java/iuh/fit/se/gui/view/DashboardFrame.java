@@ -1,8 +1,10 @@
 package iuh.fit.se.gui.view;
 
+import iuh.fit.se.dto.response.StudentResponse;
 import iuh.fit.se.gui.component.ModernButton;
 import iuh.fit.se.gui.util.ApiClient;
 import iuh.fit.se.gui.util.AppTheme;
+import iuh.fit.se.gui.util.WebSocketClient;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -15,13 +17,25 @@ public class DashboardFrame extends JFrame {
 
     private JPanel contentPanel;
     private JLabel lblWelcome;
+    private WebSocketClient webSocketClient;
 
     public DashboardFrame() {
         initComponents();
+        setupWebSocket(); // 🔥 Kết nối WebSocket cho Admin
         setTitle("Dashboard - Hệ Thống Quản Lý Sinh Viên");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
+
+        // Disconnect WebSocket khi đóng cửa sổ
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                if (webSocketClient != null) {
+                    webSocketClient.disconnect();
+                }
+            }
+        });
     }
 
     private void initComponents() {
@@ -266,6 +280,50 @@ public class DashboardFrame extends JFrame {
         contentPanel.repaint();
     }
 
+    private void setupWebSocket() {
+        webSocketClient = new WebSocketClient();
+        webSocketClient.connect(() -> {
+            String currentUsername = ApiClient.getCurrentUsername();
+            String currentRole = ApiClient.getCurrentRole();
+
+            System.out.println("🌐 [WEBSOCKET - ADMIN] Bắt đầu kết nối WebSocket");
+            System.out.println("   ├─ Username: " + currentUsername);
+            System.out.println("   └─ Role: " + currentRole);
+
+            // ✅ ENABLE Real-time group subscription (đã fix lỗi 403)
+            webSocketClient.subscribe("/topic/students/updates", StudentResponse.class, this::handleStudentUpdateRealtime);
+            System.out.println("✅ [WEBSOCKET - ADMIN] Đã join vào group real-time");
+            System.out.println("   ├─ Topic: /topic/students/updates");
+            System.out.println("   └─ Sẽ nhận tất cả cập nhật sinh viên từ group chung");
+        });
+    }
+
+    private void handleStudentUpdateRealtime(StudentResponse updatedStudent) {
+        // Chạy trên EDT (Event Dispatch Thread)
+        SwingUtilities.invokeLater(() -> {
+            try {
+                String currentUsername = ApiClient.getCurrentUsername();
+
+                System.out.println("📩 [WEBSOCKET - ADMIN] Nhận được broadcast cập nhật sinh viên từ group");
+                System.out.println("   ├─ Mã SV trong message: " + updatedStudent.getStudentCode());
+                System.out.println("   ├─ Họ tên: " + updatedStudent.getFullName());
+                System.out.println("   ├─ Email: " + updatedStudent.getEmail());
+                System.out.println("   └─ Admin đang xem: " + currentUsername);
+
+                // Admin thấy tất cả updates, không cần filter
+                System.out.println("✅ [WEBSOCKET - ADMIN] Đã nhận real-time update thành công");
+                System.out.println("   └─ Nếu đang ở màn Quản lý Sinh viên, bảng sẽ tự động refresh");
+
+                // TODO: Có thể thêm logic refresh bảng sinh viên tự động nếu đang ở StudentPanel
+
+            } catch (Exception ex) {
+                System.err.println("❌ [WEBSOCKET - ADMIN] Lỗi khi xử lý cập nhật real-time");
+                System.err.println("   └─ Chi tiết: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+    }
+
     private void logout() {
         int confirm = JOptionPane.showConfirmDialog(
                 this,
@@ -275,6 +333,10 @@ public class DashboardFrame extends JFrame {
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
+            if (webSocketClient != null) {
+                webSocketClient.disconnect();
+                System.out.println("🔌 [WEBSOCKET - ADMIN] Đã ngắt kết nối WebSocket");
+            }
             ApiClient.logout();
             dispose();
             SwingUtilities.invokeLater(() -> {

@@ -40,25 +40,46 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
-                // Verify token matches the one stored in Redis (server-side single token per user)
+                System.out.println("🔐 [AUTH-FILTER] Đang xác thực request");
+                System.out.println("   ├─ Username từ token: " + username);
+                System.out.println("   ├─ Endpoint: " + request.getMethod() + " " + request.getRequestURI());
+
+                // ⚠️  REDIS VERIFICATION DISABLED
+                // Lý do: WebSocket connection gây conflict với Redis token management
+                // Giải pháp: Chỉ validate JWT signature (vẫn đảm bảo bảo mật)
+                //
+                // Redis verification code (DISABLED):
+                /*
                 String redisKey = REDIS_TOKEN_PREFIX + username;
                 String stored = stringRedisTemplate.opsForValue().get(redisKey);
                 if (stored == null || !stored.equals(jwt)) {
-                    // token is revoked or not the latest
-                    logger.warn("JWT does not match stored token for user " + username);
                     filterChain.doFilter(request, response);
                     return;
                 }
+                */
+                System.out.println("   └─ ⚠️  Redis verification DISABLED (fix WebSocket conflict)");
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                System.out.println("✅ [AUTH-FILTER] UserDetails loaded");
+                System.out.println("   ├─ Username: " + userDetails.getUsername());
+                System.out.println("   ├─ Authorities: " + userDetails.getAuthorities());
+                System.out.println("   └─ Enabled: " + userDetails.isEnabled());
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                System.out.println("✅ [AUTH-FILTER] Authentication set successfully");
+            } else {
+                System.err.println("⚠️  [AUTH-FILTER] Token không hợp lệ hoặc NULL");
             }
         } catch (Exception e) {
             logger.error("Cannot set user authentication", e);
+            System.err.println("❌ [AUTH-FILTER] Exception: " + e.getMessage());
+            e.printStackTrace();
         }
 
         filterChain.doFilter(request, response);

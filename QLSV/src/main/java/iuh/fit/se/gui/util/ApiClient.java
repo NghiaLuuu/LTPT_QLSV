@@ -173,10 +173,10 @@ public class ApiClient {
      * Login và lưu JWT token và refresh token (persist encrypted refresh token)
      */
     public static JwtResponse login(String username, String password) throws IOException, InterruptedException {
-        System.out.println("\n╔════════════════════════════════════════════════════════════════╗");
+        System.out.println("\n╔═══════════════════════════════════════════════════════���════════╗");
         System.out.println("║ 🔐 [CLIENT-AUTH] Đang gửi yêu cầu đăng nhập");
         System.out.println("║ 👤 Username: " + username);
-        System.out.println("╚════════════════════════════════════════════════════════════════╝");
+        System.out.println("╚═══════════════════════════════════════════════���════════════════╝");
 
         String json = String.format("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
 
@@ -195,11 +195,11 @@ public class ApiClient {
             currentUsername = jwtResponse.getUsername();
             currentRole = jwtResponse.getRole();
 
-            System.out.println("\n╔════════════════════════════════════════════════════════════════╗");
+            System.out.println("\n╔═══════════════════════════════════════���═══════════════════════���╗");
             System.out.println("║ ✅ [CLIENT-AUTH] Đăng nhập thành công");
             System.out.println("║ 👤 Username: " + currentUsername);
             System.out.println("║ 🎭 Role: " + currentRole);
-            System.out.println("╚════════════════════════════════════════════════════════════════╝\n");
+            System.out.println("╚═══════════════════════════════════════════════════════���════════╝\n");
 
             // persist refresh token and username (encrypt refresh token if key available)
             try {
@@ -233,7 +233,7 @@ public class ApiClient {
             System.err.println("║ ❌ [CLIENT-AUTH] Đăng nhập thất bại");
             System.err.println("║ 🔢 Status: " + response.statusCode());
             System.err.println("║ 📝 Message: " + errorMessage);
-            System.err.println("╚════════════════════════════════════════════════════════════════╝\n");
+            System.err.println("╚═══════════════════════════════════════════════════════════════���╝\n");
 
             throw new IOException(errorMessage);
         }
@@ -392,10 +392,10 @@ public class ApiClient {
                 refresh();
                 System.out.println("✅ [API-REFRESH] Token refreshed successfully");
             } catch (IOException | InterruptedException e) {
-                System.err.println("\n╔════════════════════════════════════════════════════════════════╗");
+                System.err.println("\n╔═══════════════════════════════════════���═══════════════════════���╗");
                 System.err.println("║ ❌ [API-REFRESH-FAILED] Không thể refresh token");
                 System.err.println("║ 📝 Error: " + e.getMessage());
-                System.err.println("╚════════════════════════════════════════════════════════════════╝\n");
+                System.err.println("╚═══════════════════════════════════════���════════════════════════╝\n");
                 showUserNotification("Phiên đăng nhập không thể tự động gia hạn. Vui lòng đăng nhập lại.");
                 throw new IOException("Unauthorized and refresh failed: " + e.getMessage());
             }
@@ -482,7 +482,7 @@ public class ApiClient {
             throw new IOException("Too Many Requests after retries: " + resp.body());
         }
 
-        System.err.println("\n╔═══════════════════════���═══════════════════════════════���════════╗");
+        System.err.println("\n╔═══════════════════════���═══════════════════════���═══════���════════╗");
         System.err.println("║ ❌ [API-ERROR] Request failed");
         System.err.println("║ 🔢 Status: " + resp.statusCode());
         System.err.println("║ 🌐 URL: " + req.uri());
@@ -521,13 +521,29 @@ public class ApiClient {
      * PUT request với JWT token (auto-refresh on 401)
      */
     public static String put(String endpoint, String jsonBody) throws IOException, InterruptedException {
+        System.out.println("\n╔═══════════════════════════════════════���════════════════════════╗");
+        System.out.println("║ 🔄 [API-PUT] Đang gửi PUT request");
+        System.out.println("║ 🌐 Endpoint: " + endpoint);
+        System.out.println("║ 👤 Username: " + currentUsername);
+        System.out.println("║ 🎭 Role: " + currentRole);
+        System.out.println("║ 🔑 Token: " + (jwtToken != null ? "Bearer " + jwtToken.substring(0, Math.min(20, jwtToken.length())) + "..." : "NULL"));
+        System.out.println("╚═══════════════════════════════════════════════════════���════════╝");
+
         Supplier<HttpRequest> supplier = () -> HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + endpoint))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + (jwtToken == null ? "" : jwtToken))
                 .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
-        return sendWithAuth(supplier, 200);
+
+        try {
+            String result = sendWithAuth(supplier, 200);
+            System.out.println("✅ [API-PUT] Request thành công");
+            return result;
+        } catch (Exception e) {
+            System.err.println("❌ [API-PUT] Request thất bại: " + e.getMessage());
+            throw e;
+        }
     }
 
     /**

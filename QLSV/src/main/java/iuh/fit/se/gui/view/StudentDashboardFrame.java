@@ -326,7 +326,7 @@ public class StudentDashboardFrame extends JFrame {
                 System.out.println("🌐 [WEBSOCKET - STUDENT] Bắt đầu kết nối WebSocket");
                 System.out.println("   └─ Username: " + currentUsername);
 
-                // 🔥 REAL-TIME: Subscribe vào group chung với tất cả admin và students
+                // ✅ ENABLE Real-time group subscription (đã fix lỗi 403)
                 webSocketClient.subscribe("/topic/students/updates", StudentResponse.class, this::handleStudentUpdateRealtime);
                 System.out.println("✅ [WEBSOCKET - STUDENT] Đã join vào group real-time");
                 System.out.println("   ├─ Topic: /topic/students/updates");
@@ -360,19 +360,10 @@ public class StudentDashboardFrame extends JFrame {
                     String json = ApiClient.getObjectMapper().writeValueAsString(updatedStudent);
                     studentData = ApiClient.getObjectMapper().readTree(json);
 
-                    // Hiển thị notification
-                    JOptionPane.showMessageDialog(this,
-                            "Thông tin cá nhân của bạn đã được cập nhật bởi quản trị viên!\n\n" +
-                            "Mã SV: " + updatedStudent.getStudentCode() + "\n" +
-                            "Họ tên: " + updatedStudent.getFullName() + "\n" +
-                            "Email: " + updatedStudent.getEmail(),
-                            "🔔 Cập nhật thông tin - REAL-TIME",
-                            JOptionPane.INFORMATION_MESSAGE);
-
-                    // Refresh lại màn hình hiện tại
+                    // 🔥 CẬP NHẬT UI TRỰC TIẾP - KHÔNG CẦN POPUP
                     showInfoPanel();
 
-                    System.out.println("✅ [WEBSOCKET - STUDENT] Đã cập nhật giao diện real-time thành công");
+                    System.out.println("✅ [WEBSOCKET - STUDENT] Đã cập nhật giao diện real-time thành công (silent update)");
                 } else {
                     System.out.println("⏭️  [FILTER] Message này không phải của tôi, bỏ qua");
                     System.out.println("   └─ Message dành cho: " + updatedStudent.getStudentCode());
@@ -389,26 +380,19 @@ public class StudentDashboardFrame extends JFrame {
         // Chạy trên EDT (Event Dispatch Thread)
         SwingUtilities.invokeLater(() -> {
             try {
-                System.out.println("📩 WebSocket: Nhận được cập nhật môn học đã đăng ký từ server");
+                System.out.println("📩 [WEBSOCKET - STUDENT] Nhận được cập nhật môn học đã đăng ký từ server");
 
                 // Cập nhật studentData với dữ liệu mới
                 String json = ApiClient.getObjectMapper().writeValueAsString(dashboardData);
                 studentData = ApiClient.getObjectMapper().readTree(json);
 
-                // Hiển thị notification cho user
-                JOptionPane.showMessageDialog(this,
-                        "Bạn đã được thêm vào môn học mới bởi quản trị viên!",
-                        "Cập nhật môn học",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                // Refresh lại màn hình môn học đã đăng ký nếu đang hiển thị
+                // 🔥 CẬP NHẬT UI TRỰC TIẾP - KHÔNG CẦN POPUP
                 showEnrollmentsPanel();
 
-                System.out.println("✅ WebSocket: Đã cập nhật danh sách môn học thành công");
+                System.out.println("✅ [WEBSOCKET - STUDENT] Đã cập nhật danh sách môn học real-time thành công (silent update)");
             } catch (Exception ex) {
-                // Chỉ log ra console, không hiển thị dialog lỗi cho user
-                System.err.println("❌ WebSocket Error: Không thể xử lý cập nhật môn học");
-                System.err.println("   Chi tiết lỗi: " + ex.getMessage());
+                System.err.println("❌ [WEBSOCKET - STUDENT] Lỗi khi xử lý cập nhật môn học real-time");
+                System.err.println("   └─ Chi tiết: " + ex.getMessage());
                 ex.printStackTrace();
             }
         });
