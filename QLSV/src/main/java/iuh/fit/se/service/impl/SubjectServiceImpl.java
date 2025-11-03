@@ -14,6 +14,8 @@ import iuh.fit.se.repository.LecturerRepository;
 import iuh.fit.se.repository.StudentRepository;
 import iuh.fit.se.service.SubjectService;
 import iuh.fit.se.service.StudentService;
+import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,9 @@ public class SubjectServiceImpl implements SubjectService {
     @Autowired
     private StudentService studentService;
 
+    @Autowired
+    private LocalCacheClient localCacheClient;
+
     @Override
     @Transactional
     public Subject createSubject(SubjectRequest request) {
@@ -67,7 +72,12 @@ public class SubjectServiceImpl implements SubjectService {
             subject.setLecturer(lecturer);
         }
 
-        return subjectRepository.save(subject);
+        Subject saved = subjectRepository.save(subject);
+
+        // Evict subject list cache
+        localCacheClient.evict("subjects:all");
+
+        return saved;
     }
 
     @Override
@@ -95,6 +105,10 @@ public class SubjectServiceImpl implements SubjectService {
         }
 
         Subject updatedSubject = subjectRepository.save(subject);
+
+        // Evict caches
+        localCacheClient.evict("subjects:all");
+        localCacheClient.evict("subject:id:" + id);
 
         // Xử lý thêm sinh viên vào môn học
         if (request.getStudentIds() != null && !request.getStudentIds().isEmpty()) {
@@ -139,17 +153,27 @@ public class SubjectServiceImpl implements SubjectService {
         Subject subject = subjectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Môn học không tồn tại"));
         subjectRepository.delete(subject);
+
+        // Evict caches
+        localCacheClient.evict("subjects:all");
+        localCacheClient.evict("subject:id:" + id);
     }
 
     @Override
     public Subject getSubjectById(Long id) {
-        return subjectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Môn học không tồn tại"));
+        String key = "subject:id:" + id;
+        return localCacheClient.getOrLoad(key, Subject.class, () ->
+                subjectRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Môn học không tồn tại"))
+        );
     }
 
     @Override
     public List<Subject> getAllSubjects() {
-        return subjectRepository.findAll();
+        String key = "subjects:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<Subject>>() {}, () ->
+                subjectRepository.findAll()
+        );
     }
 
     private String generateSubjectCode() {

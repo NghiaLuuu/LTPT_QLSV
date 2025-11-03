@@ -7,6 +7,8 @@ import iuh.fit.se.exception.ResourceNotFoundException;
 import iuh.fit.se.model.Faculty;
 import iuh.fit.se.repository.FacultyRepository;
 import iuh.fit.se.service.FacultyService;
+import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,9 @@ public class FacultyServiceImpl implements FacultyService {
 
     @Autowired
     private FacultyRepository facultyRepository;
+
+    @Autowired
+    private LocalCacheClient localCacheClient;
 
     @Override
     public FacultyResponse createFaculty(FacultyRequest request) {
@@ -41,6 +46,11 @@ public class FacultyServiceImpl implements FacultyService {
         faculty.setDescription(request.getDescription());
 
         Faculty savedFaculty = facultyRepository.save(faculty);
+
+        // Evict caches
+        localCacheClient.evict("faculties:all");
+        localCacheClient.evict("faculty:id:" + savedFaculty.getId());
+
         return new FacultyResponse(savedFaculty);
     }
 
@@ -64,6 +74,11 @@ public class FacultyServiceImpl implements FacultyService {
         faculty.setDescription(request.getDescription());
 
         Faculty updatedFaculty = facultyRepository.save(faculty);
+
+        // Evict caches
+        localCacheClient.evict("faculties:all");
+        localCacheClient.evict("faculty:id:" + id);
+
         return new FacultyResponse(updatedFaculty);
     }
 
@@ -72,20 +87,30 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty faculty = facultyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Khoa không tồn tại"));
         facultyRepository.delete(faculty);
+
+        // Evict caches
+        localCacheClient.evict("faculties:all");
+        localCacheClient.evict("faculty:id:" + id);
     }
 
     @Override
     public FacultyResponse getFacultyById(Long id) {
-        Faculty faculty = facultyRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Khoa không tồn tại"));
-        return new FacultyResponse(faculty);
+        String key = "faculty:id:" + id;
+        return localCacheClient.getOrLoad(key, FacultyResponse.class, () -> {
+            Faculty faculty = facultyRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Khoa không tồn tại"));
+            return new FacultyResponse(faculty);
+        });
     }
 
     @Override
     public List<FacultyResponse> getAllFaculties() {
-        return facultyRepository.findAll().stream()
-                .map(FacultyResponse::new)
-                .collect(Collectors.toList());
+        String key = "faculties:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<FacultyResponse>>() {}, () ->
+                facultyRepository.findAll().stream()
+                        .map(FacultyResponse::new)
+                        .collect(Collectors.toList())
+        );
     }
 
     private String generateFacultyCode() {
@@ -93,4 +118,3 @@ public class FacultyServiceImpl implements FacultyService {
         return String.format("K%08d", count + 1);
     }
 }
-

@@ -18,6 +18,7 @@ import iuh.fit.se.repository.StudentRepository;
 import iuh.fit.se.repository.UserRepository;
 import iuh.fit.se.service.StudentService;
 import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -155,6 +156,7 @@ public class StudentServiceImpl implements StudentService {
         // Xóa cache khi cập nhật
         localCacheClient.evict("students:all");
         localCacheClient.evict("student:dashboard:" + updatedStudent.getStudentCode());
+        localCacheClient.evict("student:id:" + updatedStudent.getId());
 
         // 🔥 REAL-TIME: Gửi vào group chung cho tất cả admin và students
         messagingTemplate.convertAndSend("/topic/students/updates", response);
@@ -180,26 +182,40 @@ public class StudentServiceImpl implements StudentService {
         }
 
         studentRepository.delete(student);
+
+        // Evict caches
+        localCacheClient.evict("students:all");
+        localCacheClient.evict("student:id:" + id);
+        localCacheClient.evict("student:dashboard:" + student.getStudentCode());
     }
 
     @Override
     public StudentResponse getStudentById(Long id) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Sinh viên không tồn tại"));
-        return new StudentResponse(student);
+        String key = "student:id:" + id;
+        return localCacheClient.getOrLoad(key, StudentResponse.class, () -> {
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sinh viên không tồn tại"));
+            return new StudentResponse(student);
+        });
     }
 
     @Override
     public List<StudentResponse> getAllStudents() {
-        return studentRepository.findAll().stream()
-                .map(StudentResponse::new)
-                .collect(Collectors.toList());
+        String key = "students:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<StudentResponse>>() {}, () ->
+                studentRepository.findAll().stream()
+                        .map(StudentResponse::new)
+                        .collect(Collectors.toList())
+        );
     }
 
     public StudentDashboardResponse getStudentDashboard(String studentCode) {
-        Student student = studentRepository.findByStudentCode(studentCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Sinh viên không tồn tại"));
-        return new StudentDashboardResponse(student);
+        String key = "student:dashboard:" + studentCode;
+        return localCacheClient.getOrLoad(key, StudentDashboardResponse.class, () -> {
+            Student student = studentRepository.findByStudentCode(studentCode)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sinh viên không tồn tại"));
+            return new StudentDashboardResponse(student);
+        });
     }
 
     @Transactional

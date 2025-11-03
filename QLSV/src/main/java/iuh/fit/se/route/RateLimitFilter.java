@@ -12,7 +12,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -34,8 +33,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String key = REDIS_RATE_PREFIX + username;
         Long current = stringRedisTemplate.opsForValue().increment(key);
         if (current != null && current == 1L) {
-            // set expiry for window (use TimeUnit to be compatible with RedisTemplate API)
-            stringRedisTemplate.getConnectionFactory().getConnection().pExpire(key.getBytes(), windowSeconds * 1000L);
+            // Set expiry for window using Duration API (non-deprecated)
+            stringRedisTemplate.expire(key, Duration.ofSeconds(windowSeconds));
         }
 
         if (current != null && current > maxRequests) {

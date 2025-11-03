@@ -10,6 +10,8 @@ import iuh.fit.se.repository.ClassRepository;
 import iuh.fit.se.repository.FacultyRepository;
 import iuh.fit.se.repository.LecturerRepository;
 import iuh.fit.se.service.ClassService;
+import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,9 @@ public class ClassServiceImpl implements ClassService {
 
     @Autowired
     private LecturerRepository lecturerRepository;
+
+    @Autowired
+    private LocalCacheClient localCacheClient;
 
     @Override
     public Class createClass(ClassRequest request) {
@@ -51,7 +56,13 @@ public class ClassServiceImpl implements ClassService {
 
         clazz.setCourseYear(request.getCourseYear());
 
-        return classRepository.save(clazz);
+        Class saved = classRepository.save(clazz);
+
+        // Evict caches
+        localCacheClient.evict("classes:all");
+        localCacheClient.evict("class:id:" + saved.getId());
+
+        return saved;
     }
 
     @Override
@@ -75,7 +86,13 @@ public class ClassServiceImpl implements ClassService {
 
         clazz.setCourseYear(request.getCourseYear());
 
-        return classRepository.save(clazz);
+        Class updated = classRepository.save(clazz);
+
+        // Evict caches
+        localCacheClient.evict("classes:all");
+        localCacheClient.evict("class:id:" + id);
+
+        return updated;
     }
 
     @Override
@@ -83,17 +100,27 @@ public class ClassServiceImpl implements ClassService {
         Class clazz = classRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Lớp không tồn tại"));
         classRepository.delete(clazz);
+
+        // Evict caches
+        localCacheClient.evict("classes:all");
+        localCacheClient.evict("class:id:" + id);
     }
 
     @Override
     public Class getClassById(Long id) {
-        return classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Lớp không tồn tại"));
+        String key = "class:id:" + id;
+        return localCacheClient.getOrLoad(key, Class.class, () ->
+                classRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Lớp không tồn tại"))
+        );
     }
 
     @Override
     public List<Class> getAllClasses() {
-        return classRepository.findAll();
+        String key = "classes:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<Class>>() {}, () ->
+                classRepository.findAll()
+        );
     }
 
     private String generateClassCode() {

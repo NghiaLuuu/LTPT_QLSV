@@ -10,6 +10,8 @@ import iuh.fit.se.repository.EnrollmentRepository;
 import iuh.fit.se.repository.StudentRepository;
 import iuh.fit.se.repository.SubjectRepository;
 import iuh.fit.se.service.EnrollmentService;
+import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private LocalCacheClient localCacheClient;
+
     @Override
     @Transactional
     public Enrollment createEnrollment(EnrollmentRequest request) {
@@ -48,6 +53,12 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         enrollment.setGrade(request.getGrade());
 
         Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+        // Evict caches
+        localCacheClient.evict("enrollments:all");
+        localCacheClient.evict("enrollments:student:" + request.getStudentId());
+        localCacheClient.evict("enrollment:id:" + savedEnrollment.getId());
+        localCacheClient.evict("student:dashboard:" + student.getStudentCode());
 
         // 🔥 EVENT-DRIVEN: Gửi WebSocket event đến sinh viên khi được thêm vào môn học
         String studentUsername = student.getStudentCode();
@@ -89,6 +100,12 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         Enrollment updatedEnrollment = enrollmentRepository.save(enrollment);
 
+        // Evict caches
+        localCacheClient.evict("enrollments:all");
+        localCacheClient.evict("enrollments:student:" + request.getStudentId());
+        localCacheClient.evict("enrollment:id:" + id);
+        localCacheClient.evict("student:dashboard:" + student.getStudentCode());
+
         // 🔥 EVENT-DRIVEN: Gửi WebSocket event khi cập nhật enrollment (thường là cập nhật điểm)
         String studentUsername = student.getStudentCode();
 
@@ -119,8 +136,15 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         Student student = enrollment.getStudent();
         String studentUsername = student.getStudentCode();
         String subjectName = enrollment.getSubject().getName();
+        Long studentId = student.getId();
 
         enrollmentRepository.delete(enrollment);
+
+        // Evict caches
+        localCacheClient.evict("enrollments:all");
+        localCacheClient.evict("enrollments:student:" + studentId);
+        localCacheClient.evict("enrollment:id:" + id);
+        localCacheClient.evict("student:dashboard:" + studentUsername);
 
         // 🔥 EVENT-DRIVEN: Gửi WebSocket event khi xóa enrollment
         // Reload student với enrollments mới sau khi xóa
@@ -140,17 +164,26 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     public Enrollment getEnrollmentById(Long id) {
-        return enrollmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Đăng ký không tồn tại"));
+        String key = "enrollment:id:" + id;
+        return localCacheClient.getOrLoad(key, Enrollment.class, () ->
+                enrollmentRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Đăng ký không tồn tại"))
+        );
     }
 
     @Override
     public List<Enrollment> getAllEnrollments() {
-        return enrollmentRepository.findAll();
+        String key = "enrollments:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<Enrollment>>() {}, () ->
+                enrollmentRepository.findAll()
+        );
     }
 
     @Override
     public List<Enrollment> getEnrollmentsByStudentId(Long studentId) {
-        return enrollmentRepository.findByStudentId(studentId);
+        String key = "enrollments:student:" + studentId;
+        return localCacheClient.getOrLoad(key, new TypeReference<List<Enrollment>>() {}, () ->
+                enrollmentRepository.findByStudentId(studentId)
+        );
     }
 }

@@ -7,6 +7,8 @@ import iuh.fit.se.exception.ResourceNotFoundException;
 import iuh.fit.se.model.Lecturer;
 import iuh.fit.se.repository.LecturerRepository;
 import iuh.fit.se.service.LecturerService;
+import iuh.fit.se.util.LocalCacheClient;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,9 @@ public class LecturerServiceImpl implements LecturerService {
 
     @Autowired
     private LecturerRepository lecturerRepository;
+
+    @Autowired
+    private LocalCacheClient localCacheClient;
 
     @Override
     public LecturerResponse createLecturer(LecturerRequest request) {
@@ -45,6 +50,11 @@ public class LecturerServiceImpl implements LecturerService {
         lecturer.setGender(request.getGender());
 
         Lecturer savedLecturer = lecturerRepository.save(lecturer);
+
+        // Evict caches
+        localCacheClient.evict("lecturers:all");
+        localCacheClient.evict("lecturer:id:" + savedLecturer.getId());
+
         return new LecturerResponse(savedLecturer);
     }
 
@@ -73,6 +83,11 @@ public class LecturerServiceImpl implements LecturerService {
         lecturer.setGender(request.getGender());
 
         Lecturer updatedLecturer = lecturerRepository.save(lecturer);
+
+        // Evict caches
+        localCacheClient.evict("lecturers:all");
+        localCacheClient.evict("lecturer:id:" + id);
+
         return new LecturerResponse(updatedLecturer);
     }
 
@@ -81,20 +96,30 @@ public class LecturerServiceImpl implements LecturerService {
         Lecturer lecturer = lecturerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Giảng viên không tồn tại"));
         lecturerRepository.delete(lecturer);
+
+        // Evict caches
+        localCacheClient.evict("lecturers:all");
+        localCacheClient.evict("lecturer:id:" + id);
     }
 
     @Override
     public LecturerResponse getLecturerById(Long id) {
-        Lecturer lecturer = lecturerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Giảng viên không tồn tại"));
-        return new LecturerResponse(lecturer);
+        String key = "lecturer:id:" + id;
+        return localCacheClient.getOrLoad(key, LecturerResponse.class, () -> {
+            Lecturer lecturer = lecturerRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Giảng viên không tồn tại"));
+            return new LecturerResponse(lecturer);
+        });
     }
 
     @Override
     public List<LecturerResponse> getAllLecturers() {
-        return lecturerRepository.findAll().stream()
-                .map(LecturerResponse::new)
-                .collect(Collectors.toList());
+        String key = "lecturers:all";
+        return localCacheClient.getOrLoad(key, new TypeReference<List<LecturerResponse>>() {}, () ->
+                lecturerRepository.findAll().stream()
+                        .map(LecturerResponse::new)
+                        .collect(Collectors.toList())
+        );
     }
 
     private String generateLecturerCode() {
@@ -102,4 +127,3 @@ public class LecturerServiceImpl implements LecturerService {
         return String.format("GV%08d", count + 1);
     }
 }
-
